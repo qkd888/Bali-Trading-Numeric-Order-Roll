@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enhanced Numbered Cells App</title>
+    <style>
+      :root {
+        --bg-color: #f0f4f8;
+        --text-color: #2d3748;
+        --cell-bg: #4299e1;
+        --cell-clicked: #ed8936;
+        --button-bg: #4a5568;
+        --button-text: #ffffff;
+        --grid-bg: #ffffff;
+        --shadow-color: rgba(0, 0, 0, 0.1);
+        --transition-duration: 0.3s;
+        --toast-bg: #323232;
+      }
+
+      .dark-mode {
+        --bg-color: #2d3748;
+        --text-color: #f7fafc;
+        --cell-bg: #2b6cb0;
+        --cell-clicked: #c05621;
+        --button-bg: #718096;
+        --grid-bg: #4a5568;
+        --shadow-color: rgba(255, 255, 255, 0.1);
+        --toast-bg: #fafafa;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        transition: background-color var(--transition-duration) ease,
+          color var(--transition-duration) ease;
+        min-height: 100vh;
+        margin: 0;
+      }
+
+      .container {
+        max-width: 600px;
+        width: 100%;
+        background-color: var(--grid-bg);
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px var(--shadow-color);
+        transition: background-color var(--transition-duration) ease,
+          box-shadow var(--transition-duration) ease;
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .controls {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+      }
+
+      button {
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        background-color: var(--button-bg);
+        color: var(--button-text);
+        border: none;
+        border-radius: 5px;
+        transition: all var(--transition-duration) ease;
+      }
+
+      button:hover,
+      button:focus {
+        opacity: 0.9;
+        transform: translateY(-2px);
+        outline: none;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 5px;
+        margin-bottom: 20px;
+      }
+
+      .cell {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--cell-bg);
+        color: var(--button-text);
+        font-size: 14px;
+        cursor: pointer;
+        transition: all var(--transition-duration) ease;
+        border-radius: 5px;
+        user-select: none;
+        position: relative;
+      }
+
+      .cell:hover,
+      .cell:focus {
+        transform: scale(1.1);
+        z-index: 1;
+        outline: none;
+      }
+
+      .cell.clicked {
+        background-color: var(--cell-clicked);
+        animation: pulse var(--transition-duration);
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      #stats {
+        text-align: center;
+        font-size: 18px;
+        margin-top: 20px;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 20px;
+        background-color: var(--cell-bg);
+        border-radius: 10px;
+        overflow: hidden;
+        margin-top: 10px;
+        position: relative;
+      }
+
+      .progress {
+        height: 100%;
+        background-color: var(--cell-clicked);
+        transition: width var(--transition-duration) ease;
+      }
+
+      @media (max-width: 600px) {
+        .grid {
+          grid-template-columns: repeat(5, 1fr);
+        }
+
+        .cell {
+          font-size: 12px;
+        }
+      }
+
+      .toast {
+        visibility: hidden;
+        min-width: 200px;
+        margin-left: -125px;
+        background-color: var(--toast-bg);
+        color: var(--button-text);
+        text-align: center;
+        border-radius: 5px;
+        padding: 16px;
+        position: fixed;
+        z-index: 1;
+        left: 50%;
+        bottom: 30px;
+        font-size: 17px;
+        white-space: nowrap;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: visibility 0s linear 0.5s, opacity 0.5s 0s, transform 0.5s;
+      }
+
+      .toast.show {
+        visibility: visible;
+        opacity: 1;
+        transform: translateY(0);
+        transition: opacity 0.5s 0s, transform 0.5s;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Enhanced Numbered Cells App</h1>
+      <div class="controls">
+        <button id="reset">Reset All</button>
+        <button id="darkModeToggle">Dark Mode</button>
+      </div>
+      <div class="grid" id="grid"></div>
+      <div id="stats"></div>
+      <div class="progress-bar">
+        <div class="progress" id="progressBar"></div>
+      </div>
+    </div>
+    <div id="toast" class="toast">Action completed</div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const grid = document.getElementById("grid");
+        const resetButton = document.getElementById("reset");
+        const darkModeToggle = document.getElementById("darkModeToggle");
+        const statsElement = document.getElementById("stats");
+        const progressBar = document.getElementById("progressBar");
+        const toast = document.getElementById("toast");
+        const storageKey = "cellStates";
+        const darkModeKey = "darkMode";
+
+        let cellStates = loadCellStates();
+
+        function loadCellStates() {
+          return (
+            JSON.parse(localStorage.getItem(storageKey)) ||
+            Array(100).fill(false)
+          );
+        }
+
+        function saveCellStates() {
+          localStorage.setItem(storageKey, JSON.stringify(cellStates));
+        }
+
+        function updateStats() {
+          const clickedCount = cellStates.filter(Boolean).length;
+          const percentage = (clickedCount / 100) * 100;
+          statsElement.textContent = `Clicked: ${clickedCount} / 100 (${percentage.toFixed(
+            1
+          )}%)`;
+          progressBar.style.width = `${percentage}%`;
+        }
+
+        function createCells() {
+          const fragment = document.createDocumentFragment();
+          for (let i = 0; i < 100; i++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+            cell.textContent = i + 1;
+            if (cellStates[i]) {
+              cell.classList.add("clicked");
+            }
+            cell.tabIndex = 0; // Make cells focusable
+            cell.setAttribute("role", "button");
+            cell.setAttribute("aria-pressed", cellStates[i]);
+            cell.setAttribute("aria-label", `Cell ${i + 1}`);
+            cell.addEventListener("click", () => toggleCell(i, cell));
+            cell.addEventListener("touchend", () => toggleCell(i, cell));
+            cell.addEventListener("keydown", (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                toggleCell(i, cell);
+              }
+            });
+            cell.title = `Cell ${i + 1}`;
+            fragment.appendChild(cell);
+          }
+          grid.appendChild(fragment);
+        }
+
+        function toggleCell(index, cell) {
+          cellStates[index] = !cellStates[index];
+          cell.classList.toggle("clicked");
+          cell.setAttribute("aria-pressed", cellStates[index]);
+          saveCellStates();
+          updateStats();
+          showToast(`Cell ${index + 1} toggled`);
+        }
+
+        function resetCells() {
+          if (confirm("Are you sure you want to reset all cells?")) {
+            cellStates.fill(false);
+            document.querySelectorAll(".cell").forEach((cell) => {
+              cell.classList.remove("clicked");
+              cell.setAttribute("aria-pressed", false);
+            });
+            saveCellStates();
+            updateStats();
+            showToast("All cells reset");
+          }
+        }
+
+        function toggleDarkMode() {
+          document.body.classList.toggle("dark-mode");
+          localStorage.setItem(
+            darkModeKey,
+            document.body.classList.contains("dark-mode")
+          );
+        }
+
+        function loadDarkMode() {
+          if (localStorage.getItem(darkModeKey) === "true") {
+            document.body.classList.add("dark-mode");
+          }
+        }
+
+        function showToast(message) {
+          toast.textContent = message;
+          toast.classList.add("show");
+          setTimeout(() => {
+            toast.classList.remove("show");
+          }, 3000);
+        }
+
+        resetButton.addEventListener("click", resetCells);
+        darkModeToggle.addEventListener("click", toggleDarkMode);
+
+        loadDarkMode();
+        createCells();
+        updateStats();
+      });
+    </script>
+  </body>
+</html>
