@@ -194,6 +194,7 @@
       <h1>Enhanced Numbered Cells App</h1>
       <div class="controls">
         <button id="reset">Reset All</button>
+        <button id="save">Save</button>
         <button id="darkModeToggle">Dark Mode</button>
       </div>
       <div class="grid" id="grid"></div>
@@ -208,6 +209,7 @@
       document.addEventListener("DOMContentLoaded", () => {
         const grid = document.getElementById("grid");
         const resetButton = document.getElementById("reset");
+        const saveButton = document.getElementById("save");
         const darkModeToggle = document.getElementById("darkModeToggle");
         const statsElement = document.getElementById("stats");
         const progressBar = document.getElementById("progressBar");
@@ -267,7 +269,6 @@
           cellStates[index] = !cellStates[index];
           cell.classList.toggle("clicked");
           cell.setAttribute("aria-pressed", cellStates[index]);
-          saveCellStates();
           updateStats();
           showToast(`Cell ${index + 1} toggled`);
         }
@@ -279,10 +280,14 @@
               cell.classList.remove("clicked");
               cell.setAttribute("aria-pressed", false);
             });
-            saveCellStates();
             updateStats();
             showToast("All cells reset");
           }
+        }
+
+        function saveData() {
+          saveCellStates();
+          showToast("Data saved successfully");
         }
 
         function toggleDarkMode() {
@@ -308,6 +313,7 @@
         }
 
         resetButton.addEventListener("click", resetCells);
+        saveButton.addEventListener("click", saveData);
         darkModeToggle.addEventListener("click", toggleDarkMode);
 
         loadDarkMode();
